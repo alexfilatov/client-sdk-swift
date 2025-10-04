@@ -181,8 +181,8 @@ extension PictureInPictureController: AVPictureInPictureControllerDelegate {
                                             restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void)
     {
         DispatchQueue.main.async {
-            log("Picture in Picture restore user interface")
-            delegates.notify { delegate in
+            self.log("Picture in Picture restore user interface")
+            self.delegates.notify { delegate in
                 delegate.pictureInPictureController?(self, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler: completionHandler)
             }
         }

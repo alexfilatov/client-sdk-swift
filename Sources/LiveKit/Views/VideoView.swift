@@ -184,8 +184,8 @@ public class VideoView: NativeView, Loggable {
     @available(iOS 15.0, *)
     @objc
     public nonisolated var pictureInPictureController: PictureInPictureController? {
-        get { _state.pictureInPictureController as? PictureInPictureController }
-        set { _state.mutate { $0.pictureInPictureController = newValue } }
+        get { _pictureInPictureController }
+        set { _pictureInPictureController = newValue }
     }
 
     /// Whether Picture in Picture is supported on this device
@@ -199,14 +199,14 @@ public class VideoView: NativeView, Loggable {
     @available(iOS 15.0, *)
     @objc
     public var isPictureInPictureActive: Bool {
-        (_state.pictureInPictureController as? PictureInPictureController)?.isPictureInPictureActive ?? false
+        _pictureInPictureController?.isPictureInPictureActive ?? false
     }
 
     /// Whether Picture in Picture is currently possible
     @available(iOS 15.0, *)
     @objc
     public var isPictureInPicturePossible: Bool {
-        (_state.pictureInPictureController as? PictureInPictureController)?.isPictureInPicturePossible ?? false
+        _pictureInPictureController?.isPictureInPicturePossible ?? false
     }
     #endif
 
@@ -252,8 +252,7 @@ public class VideoView: NativeView, Loggable {
         var captureDevice: AVCaptureDevice?
 
         #if os(iOS) || os(tvOS) || os(visionOS)
-        // Picture in Picture - stored as Any? to avoid availability issues
-        var pictureInPictureController: Any?
+        // Picture in Picture property removed - now stored as private property outside State
         #endif
 
         // whether if current state should be rendering
@@ -277,6 +276,10 @@ public class VideoView: NativeView, Loggable {
     #if os(iOS) || os(tvOS) || os(visionOS)
     // Dedicated PiP layer that persists across renderer changes
     private var _pipDisplayLayer: AVSampleBufferDisplayLayer?
+    
+    // Picture in Picture controller - stored outside State to avoid Sendable/availability issues
+    @available(iOS 15.0, *)
+    private var _pictureInPictureController: PictureInPictureController?
     #endif
 
     private var _debugTextView: TextView?
@@ -964,12 +967,12 @@ public extension VideoView {
         }
 
         // Create PiP controller if it doesn't exist
-        if (_state.pictureInPictureController as? PictureInPictureController) == nil, let pipLayer = _pipDisplayLayer {
+        if _pictureInPictureController == nil, let pipLayer = _pipDisplayLayer {
             guard let pipController = PictureInPictureController(sampleBufferDisplayLayer: pipLayer) else {
                 log("Failed to create PictureInPictureController", .error)
                 return false
             }
-            _state.mutate { $0.pictureInPictureController = pipController }
+            _pictureInPictureController = pipController
             log("Picture in Picture controller created")
         }
 
@@ -980,7 +983,7 @@ public extension VideoView {
     /// Note: You must call preparePictureInPicture() before calling this method
     @available(iOS 15.0, *)
     func startPictureInPicture() {
-        guard let pipController = _state.pictureInPictureController as? PictureInPictureController else {
+        guard let pipController = _pictureInPictureController else {
             log("Picture in Picture controller not initialized. Call preparePictureInPicture() first.", .warning)
             return
         }
@@ -991,15 +994,15 @@ public extension VideoView {
     /// Stop Picture in Picture
     @available(iOS 15.0, *)
     func stopPictureInPicture() {
-        (_state.pictureInPictureController as? PictureInPictureController)?.stopPictureInPicture()
+        _pictureInPictureController?.stopPictureInPicture()
     }
 
     /// Clean up Picture in Picture resources
     /// Call this when you no longer need Picture in Picture
     @available(iOS 15.0, *)
     func cleanupPictureInPicture() {
-        (_state.pictureInPictureController as? PictureInPictureController)?.invalidate()
-        _state.mutate { $0.pictureInPictureController = nil }
+        _pictureInPictureController?.invalidate()
+        _pictureInPictureController = nil
         _pipDisplayLayer = nil
         log("Picture in Picture cleaned up")
     }

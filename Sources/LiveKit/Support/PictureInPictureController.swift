@@ -180,7 +180,7 @@ extension PictureInPictureController: AVPictureInPictureControllerDelegate {
     nonisolated public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                             restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void)
     {
-        Task { @MainActor in
+        DispatchQueue.main.async {
             log("Picture in Picture restore user interface")
             delegates.notify { delegate in
                 delegate.pictureInPictureController?(self, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler: completionHandler)

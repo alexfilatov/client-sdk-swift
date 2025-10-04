@@ -180,9 +180,15 @@ extension PictureInPictureController: AVPictureInPictureControllerDelegate {
     nonisolated public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                             restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void)
     {
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else {
+                completionHandler(false)
+                return
+            }
             self.log("Picture in Picture restore user interface")
-            self.delegates.notify { delegate in
+            // Call delegates directly to avoid capturing completionHandler in @Sendable closure
+            let delegatesList = self.delegates.allDelegates
+            for delegate in delegatesList {
                 delegate.pictureInPictureController?(self, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler: completionHandler)
             }
         }

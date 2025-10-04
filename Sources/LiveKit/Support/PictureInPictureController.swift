@@ -67,13 +67,13 @@ public class PictureInPictureController: NSObject, Loggable {
     @objc
     public init?(sampleBufferDisplayLayer: AVSampleBufferDisplayLayer) {
         guard Self.isPictureInPictureSupported else {
-            log("Picture in Picture is not supported on this device", .warning)
             return nil
         }
 
-        self.sampleBufferDisplayLayer = sampleBufferDisplayLayer
-
         super.init()
+        
+        self.sampleBufferDisplayLayer = sampleBufferDisplayLayer
+        log("Picture in Picture controller initialized")
 
         let contentSource = AVPictureInPictureController.ContentSource(
             sampleBufferDisplayLayer: sampleBufferDisplayLayer,
@@ -178,7 +178,7 @@ extension PictureInPictureController: AVPictureInPictureControllerDelegate {
     }
 
     nonisolated public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
-                                            restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void)
+                                            restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping @Sendable (Bool) -> Void)
     {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else {
@@ -229,7 +229,7 @@ extension PictureInPictureController: AVPictureInPictureSampleBufferPlaybackDele
 
     nonisolated public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                             skipByInterval skipInterval: CMTime,
-                                            completion completionHandler: @escaping () -> Void)
+                                            completion completionHandler: @escaping @Sendable () -> Void)
     {
         Task { @MainActor in
             log("Picture in Picture skip by interval: \(skipInterval.seconds)")

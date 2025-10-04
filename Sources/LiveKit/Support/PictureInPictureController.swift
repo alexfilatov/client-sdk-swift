@@ -20,6 +20,8 @@ import AVFoundation
 import AVKit
 
 /// A controller that manages Picture in Picture playback for LiveKit video.
+@available(iOS 15.0, *)
+@MainActor
 @objc
 public class PictureInPictureController: NSObject, Loggable {
     // MARK: - Public Properties
@@ -85,7 +87,9 @@ public class PictureInPictureController: NSObject, Loggable {
 
         self.pipController = pipController
         pipController.delegate = self
-        pipController.canStartPictureInPictureAutomaticallyFromInline = false
+        if #available(iOS 14.2, *) {
+            pipController.canStartPictureInPictureAutomaticallyFromInline = false
+        }
 
         log("PictureInPictureController initialized")
     }
@@ -205,7 +209,7 @@ extension PictureInPictureController: AVPictureInPictureSampleBufferPlaybackDele
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                             skipByInterval skipInterval: CMTime,
-                                            completionHandler: @escaping () -> Void)
+                                            completion completionHandler: @escaping () -> Void)
     {
         log("Picture in Picture skip by interval: \(skipInterval.seconds)")
         // For live streaming, we typically don't support seeking

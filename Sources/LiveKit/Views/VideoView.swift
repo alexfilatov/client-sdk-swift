@@ -198,14 +198,14 @@ public class VideoView: NativeView, Loggable {
     /// Whether Picture in Picture is currently active
     @available(iOS 15.0, *)
     @objc
-    public nonisolated var isPictureInPictureActive: Bool {
+    public var isPictureInPictureActive: Bool {
         _state.pictureInPictureController?.isPictureInPictureActive ?? false
     }
 
     /// Whether Picture in Picture is currently possible
     @available(iOS 15.0, *)
     @objc
-    public nonisolated var isPictureInPicturePossible: Bool {
+    public var isPictureInPicturePossible: Bool {
         _state.pictureInPictureController?.isPictureInPicturePossible ?? false
     }
     #endif

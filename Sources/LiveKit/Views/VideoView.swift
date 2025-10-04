@@ -15,6 +15,9 @@
  */
 
 @preconcurrency import AVFoundation
+#if os(iOS) || os(tvOS) || os(visionOS)
+import AVKit
+#endif
 import MetalKit
 
 internal import LiveKitWebRTC
@@ -176,6 +179,33 @@ public class VideoView: NativeView, Loggable {
         return nr.sampleBufferDisplayLayer
     }
 
+    #if os(iOS) || os(tvOS) || os(visionOS)
+    /// Picture in Picture controller
+    @objc
+    public nonisolated var pictureInPictureController: PictureInPictureController? {
+        get { _state.pictureInPictureController }
+        set { _state.mutate { $0.pictureInPictureController = newValue } }
+    }
+
+    /// Whether Picture in Picture is supported on this device
+    @objc
+    public static var isPictureInPictureSupported: Bool {
+        PictureInPictureController.isPictureInPictureSupported
+    }
+
+    /// Whether Picture in Picture is currently active
+    @objc
+    public nonisolated var isPictureInPictureActive: Bool {
+        _state.pictureInPictureController?.isPictureInPictureActive ?? false
+    }
+
+    /// Whether Picture in Picture is currently possible
+    @objc
+    public nonisolated var isPictureInPicturePossible: Bool {
+        _state.pictureInPictureController?.isPictureInPicturePossible ?? false
+    }
+    #endif
+
     // MARK: - Internal
 
     enum RenderTarget {
@@ -217,6 +247,11 @@ public class VideoView: NativeView, Loggable {
         var captureOptions: VideoCaptureOptions?
         var captureDevice: AVCaptureDevice?
 
+        #if os(iOS) || os(tvOS) || os(visionOS)
+        // Picture in Picture
+        var pictureInPictureController: PictureInPictureController?
+        #endif
+
         // whether if current state should be rendering
         var shouldRender: Bool {
             track != nil && isEnabled && !isHidden
@@ -233,6 +268,11 @@ public class VideoView: NativeView, Loggable {
     #else
     private var _primaryRenderer: NativeRendererView?
     private var _secondaryRenderer: NativeRendererView?
+    #endif
+
+    #if os(iOS) || os(tvOS) || os(visionOS)
+    // Dedicated PiP layer that persists across renderer changes
+    private var _pipDisplayLayer: AVSampleBufferDisplayLayer?
     #endif
 
     private var _debugTextView: TextView?
@@ -548,6 +588,16 @@ private extension VideoView {
             r.removeFromSuperview()
             _secondaryRenderer = nil
         }
+
+        #if os(iOS) || os(tvOS) || os(visionOS)
+        // Connect PiP layer to new renderer if it exists
+        if let pipLayer = _pipDisplayLayer,
+           let sampleBufferRenderer = newView as? SampleBufferVideoRenderer
+        {
+            sampleBufferRenderer.setPictureInPictureLayer(pipLayer)
+            log("Connected PiP layer to new renderer")
+        }
+        #endif
 
         return newView
     }
@@ -868,6 +918,82 @@ extension VideoView.TransitionMode {
         case .crossDissolve: return .transitionCrossDissolve
         default: return nil
         }
+    }
+}
+#endif
+
+// MARK: - Picture in Picture
+
+#if os(iOS) || os(tvOS) || os(visionOS)
+@MainActor
+public extension VideoView {
+    /// Prepare Picture in Picture
+    /// This creates a dedicated layer for PiP and initializes the PiP controller
+    /// Must be called before attempting to start Picture in Picture
+    /// - Returns: true if PiP was successfully prepared, false otherwise
+    @discardableResult
+    func preparePictureInPicture() -> Bool {
+        guard Self.isPictureInPictureSupported else {
+            log("Picture in Picture is not supported on this device", .warning)
+            return false
+        }
+
+        // Ensure we're using sampleBuffer render mode
+        if _state.renderMode != .sampleBuffer {
+            log("Picture in Picture requires sampleBuffer render mode", .warning)
+            return false
+        }
+
+        // Create dedicated PiP layer if it doesn't exist
+        if _pipDisplayLayer == nil {
+            let pipLayer = AVSampleBufferDisplayLayer()
+            pipLayer.videoGravity = .resizeAspectFill
+            _pipDisplayLayer = pipLayer
+            log("Created dedicated PiP display layer")
+
+            // Connect to existing renderer if available
+            if let sampleBufferRenderer = _primaryRenderer as? SampleBufferVideoRenderer {
+                sampleBufferRenderer.setPictureInPictureLayer(pipLayer)
+                log("Connected PiP layer to existing renderer")
+            }
+        }
+
+        // Create PiP controller if it doesn't exist
+        if _state.pictureInPictureController == nil, let pipLayer = _pipDisplayLayer {
+            guard let pipController = PictureInPictureController(sampleBufferDisplayLayer: pipLayer) else {
+                log("Failed to create PictureInPictureController", .error)
+                return false
+            }
+            _state.mutate { $0.pictureInPictureController = pipController }
+            log("Picture in Picture controller created")
+        }
+
+        return true
+    }
+
+    /// Start Picture in Picture
+    /// Note: You must call preparePictureInPicture() before calling this method
+    func startPictureInPicture() {
+        guard let pipController = _state.pictureInPictureController else {
+            log("Picture in Picture controller not initialized. Call preparePictureInPicture() first.", .warning)
+            return
+        }
+
+        pipController.startPictureInPicture()
+    }
+
+    /// Stop Picture in Picture
+    func stopPictureInPicture() {
+        _state.pictureInPictureController?.stopPictureInPicture()
+    }
+
+    /// Clean up Picture in Picture resources
+    /// Call this when you no longer need Picture in Picture
+    func cleanupPictureInPicture() {
+        _state.pictureInPictureController?.invalidate()
+        _state.mutate { $0.pictureInPictureController = nil }
+        _pipDisplayLayer = nil
+        log("Picture in Picture cleaned up")
     }
 }
 #endif

@@ -22,6 +22,7 @@ class SampleBufferVideoRenderer: NativeView, Loggable {
     private struct State {
         var isMirrored: Bool = false
         var videoRotation: VideoRotation = ._0
+        weak var pipDisplayLayer: AVSampleBufferDisplayLayer?
     }
 
     private let _state = StateSync(State())
@@ -41,6 +42,12 @@ class SampleBufferVideoRenderer: NativeView, Loggable {
         #endif
     }
 
+    /// Set a Picture in Picture display layer to mirror frames to
+    /// This allows PiP to work even when the main renderer is recreated
+    func setPictureInPictureLayer(_ layer: AVSampleBufferDisplayLayer?) {
+        _state.mutate { $0.pipDisplayLayer = layer }
+    }
+
     @available(*, unavailable)
     required init?(coder _: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -49,11 +56,19 @@ class SampleBufferVideoRenderer: NativeView, Loggable {
     override func performLayout() {
         super.performLayout()
 
-        let (rotation, isMirrored) = _state.read { ($0.videoRotation, $0.isMirrored) }
-        sampleBufferDisplayLayer.transform = CATransform3D.from(rotation: rotation, isMirrored: isMirrored)
-        sampleBufferDisplayLayer.frame = bounds
+        let (rotation, isMirrored, pipLayer) = _state.read { ($0.videoRotation, $0.isMirrored, $0.pipDisplayLayer) }
+        let transform = CATransform3D.from(rotation: rotation, isMirrored: isMirrored)
 
+        sampleBufferDisplayLayer.transform = transform
+        sampleBufferDisplayLayer.frame = bounds
         sampleBufferDisplayLayer.removeAllAnimations()
+
+        // Apply same transform to PiP layer if it exists
+        if let pipLayer {
+            Task { @MainActor in
+                pipLayer.transform = transform
+            }
+        }
     }
 }
 
@@ -88,8 +103,14 @@ extension SampleBufferVideoRenderer: LKRTCVideoRenderer {
             return result
         }
 
+        let pipLayer = _state.read { $0.pipDisplayLayer }
+
         Task { @MainActor in
             self.sampleBufferDisplayLayer.enqueue(sampleBuffer)
+
+            // Also enqueue to PiP layer if it exists
+            pipLayer?.enqueue(sampleBuffer)
+
             if didUpdateRotation {
                 self.setNeedsLayout()
             }

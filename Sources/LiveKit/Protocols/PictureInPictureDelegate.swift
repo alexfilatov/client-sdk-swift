@@ -18,6 +18,7 @@
 
 import Foundation
 
+@available(iOS 15.0, *)
 @objc
 public protocol PictureInPictureDelegate: AnyObject, Sendable {
     /// Picture in Picture will start

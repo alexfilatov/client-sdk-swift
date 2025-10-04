@@ -181,6 +181,7 @@ public class VideoView: NativeView, Loggable {
 
     #if os(iOS) || os(tvOS) || os(visionOS)
     /// Picture in Picture controller
+    @available(iOS 15.0, *)
     @objc
     public nonisolated var pictureInPictureController: PictureInPictureController? {
         get { _state.pictureInPictureController }
@@ -188,18 +189,21 @@ public class VideoView: NativeView, Loggable {
     }
 
     /// Whether Picture in Picture is supported on this device
+    @available(iOS 15.0, *)
     @objc
     public static var isPictureInPictureSupported: Bool {
         PictureInPictureController.isPictureInPictureSupported
     }
 
     /// Whether Picture in Picture is currently active
+    @available(iOS 15.0, *)
     @objc
     public nonisolated var isPictureInPictureActive: Bool {
         _state.pictureInPictureController?.isPictureInPictureActive ?? false
     }
 
     /// Whether Picture in Picture is currently possible
+    @available(iOS 15.0, *)
     @objc
     public nonisolated var isPictureInPicturePossible: Bool {
         _state.pictureInPictureController?.isPictureInPicturePossible ?? false
@@ -931,6 +935,7 @@ public extension VideoView {
     /// This creates a dedicated layer for PiP and initializes the PiP controller
     /// Must be called before attempting to start Picture in Picture
     /// - Returns: true if PiP was successfully prepared, false otherwise
+    @available(iOS 15.0, *)
     @discardableResult
     func preparePictureInPicture() -> Bool {
         guard Self.isPictureInPictureSupported else {
@@ -973,6 +978,7 @@ public extension VideoView {
 
     /// Start Picture in Picture
     /// Note: You must call preparePictureInPicture() before calling this method
+    @available(iOS 15.0, *)
     func startPictureInPicture() {
         guard let pipController = _state.pictureInPictureController else {
             log("Picture in Picture controller not initialized. Call preparePictureInPicture() first.", .warning)
@@ -983,12 +989,14 @@ public extension VideoView {
     }
 
     /// Stop Picture in Picture
+    @available(iOS 15.0, *)
     func stopPictureInPicture() {
         _state.pictureInPictureController?.stopPictureInPicture()
     }
 
     /// Clean up Picture in Picture resources
     /// Call this when you no longer need Picture in Picture
+    @available(iOS 15.0, *)
     func cleanupPictureInPicture() {
         _state.pictureInPictureController?.invalidate()
         _state.mutate { $0.pictureInPictureController = nil }

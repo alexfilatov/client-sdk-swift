@@ -277,9 +277,15 @@ public class VideoView: NativeView, Loggable {
     // Dedicated PiP layer that persists across renderer changes
     private var _pipDisplayLayer: AVSampleBufferDisplayLayer?
     
-    // Picture in Picture controller - stored outside State to avoid Sendable/availability issues
+    // Picture in Picture controller - stored as Any? to avoid @available requirement on stored property
+    private var _pipControllerStorage: Any?
+    
+    // Computed property wrapper with @available for type-safe access
     @available(iOS 15.0, *)
-    private var _pictureInPictureController: PictureInPictureController?
+    private var _pictureInPictureController: PictureInPictureController? {
+        get { _pipControllerStorage as? PictureInPictureController }
+        set { _pipControllerStorage = newValue }
+    }
     #endif
 
     private var _debugTextView: TextView?

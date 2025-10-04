@@ -80,11 +80,7 @@ public class PictureInPictureController: NSObject, Loggable {
             playbackDelegate: self
         )
 
-        guard let pipController = AVPictureInPictureController(contentSource: contentSource) else {
-            log("Failed to create AVPictureInPictureController", .error)
-            return nil
-        }
-
+        let pipController = AVPictureInPictureController(contentSource: contentSource)
         self.pipController = pipController
         pipController.delegate = self
         if #available(iOS 14.2, *) {
@@ -142,78 +138,98 @@ public class PictureInPictureController: NSObject, Loggable {
 
 // MARK: - AVPictureInPictureControllerDelegate
 
+@available(iOS 15.0, *)
 extension PictureInPictureController: AVPictureInPictureControllerDelegate {
-    public func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-        log("Picture in Picture will start")
-        delegates.notify { $0.pictureInPictureControllerWillStart?(self) }
+    nonisolated public func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        Task { @MainActor in
+            log("Picture in Picture will start")
+            delegates.notify { $0.pictureInPictureControllerWillStart?(self) }
+        }
     }
 
-    public func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-        log("Picture in Picture did start")
-        delegates.notify { $0.pictureInPictureControllerDidStart?(self) }
+    nonisolated public func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        Task { @MainActor in
+            log("Picture in Picture did start")
+            delegates.notify { $0.pictureInPictureControllerDidStart?(self) }
+        }
     }
 
-    public func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-        log("Picture in Picture will stop")
-        delegates.notify { $0.pictureInPictureControllerWillStop?(self) }
+    nonisolated public func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        Task { @MainActor in
+            log("Picture in Picture will stop")
+            delegates.notify { $0.pictureInPictureControllerWillStop?(self) }
+        }
     }
 
-    public func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-        log("Picture in Picture did stop")
-        delegates.notify { $0.pictureInPictureControllerDidStop?(self) }
+    nonisolated public func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+        Task { @MainActor in
+            log("Picture in Picture did stop")
+            delegates.notify { $0.pictureInPictureControllerDidStop?(self) }
+        }
     }
 
-    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
+    nonisolated public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                             failedToStartPictureInPictureWithError error: Error)
     {
-        log("Picture in Picture failed to start with error: \(error)", .error)
-        delegates.notify { $0.pictureInPictureController?(self, failedToStartWithError: error) }
+        Task { @MainActor in
+            log("Picture in Picture failed to start with error: \(error)", .error)
+            delegates.notify { $0.pictureInPictureController?(self, failedToStartWithError: error) }
+        }
     }
 
-    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
+    nonisolated public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                             restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void)
     {
-        log("Picture in Picture restore user interface")
-        delegates.notify { delegate in
-            delegate.pictureInPictureController?(self, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler: completionHandler)
+        Task { @MainActor in
+            log("Picture in Picture restore user interface")
+            delegates.notify { delegate in
+                delegate.pictureInPictureController?(self, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler: completionHandler)
+            }
         }
     }
 }
 
 // MARK: - AVPictureInPictureSampleBufferPlaybackDelegate
 
+@available(iOS 15.0, *)
 extension PictureInPictureController: AVPictureInPictureSampleBufferPlaybackDelegate {
-    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
+    nonisolated public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                             setPlaying playing: Bool)
     {
-        log("Picture in Picture set playing: \(playing)")
-        // For live video streaming, we don't need to pause/resume playback
-        // The video will continue streaming regardless of PiP state
+        Task { @MainActor in
+            log("Picture in Picture set playing: \(playing)")
+            // For live video streaming, we don't need to pause/resume playback
+            // The video will continue streaming regardless of PiP state
+        }
     }
 
-    public func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
+    nonisolated public func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
         // For live streaming, return an indefinite time range
         return CMTimeRange(start: .zero, duration: .positiveInfinity)
     }
 
-    public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+    nonisolated public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
         // For live video, always return false as we're always "playing"
         return false
     }
 
-    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
+    nonisolated public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                             didTransitionToRenderSize newRenderSize: CMVideoDimensions)
     {
-        log("Picture in Picture did transition to render size: \(newRenderSize.width)x\(newRenderSize.height)")
+        Task { @MainActor in
+            log("Picture in Picture did transition to render size: \(newRenderSize.width)x\(newRenderSize.height)")
+        }
     }
 
-    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
+    nonisolated public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController,
                                             skipByInterval skipInterval: CMTime,
                                             completion completionHandler: @escaping () -> Void)
     {
-        log("Picture in Picture skip by interval: \(skipInterval.seconds)")
-        // For live streaming, we typically don't support seeking
-        completionHandler()
+        Task { @MainActor in
+            log("Picture in Picture skip by interval: \(skipInterval.seconds)")
+            // For live streaming, we typically don't support seeking
+            completionHandler()
+        }
     }
 }
 

@@ -184,7 +184,7 @@ public class VideoView: NativeView, Loggable {
     @available(iOS 15.0, *)
     @objc
     public nonisolated var pictureInPictureController: PictureInPictureController? {
-        get { _state.pictureInPictureController }
+        get { _state.pictureInPictureController as? PictureInPictureController }
         set { _state.mutate { $0.pictureInPictureController = newValue } }
     }
 
@@ -199,14 +199,14 @@ public class VideoView: NativeView, Loggable {
     @available(iOS 15.0, *)
     @objc
     public var isPictureInPictureActive: Bool {
-        _state.pictureInPictureController?.isPictureInPictureActive ?? false
+        (_state.pictureInPictureController as? PictureInPictureController)?.isPictureInPictureActive ?? false
     }
 
     /// Whether Picture in Picture is currently possible
     @available(iOS 15.0, *)
     @objc
     public var isPictureInPicturePossible: Bool {
-        _state.pictureInPictureController?.isPictureInPicturePossible ?? false
+        (_state.pictureInPictureController as? PictureInPictureController)?.isPictureInPicturePossible ?? false
     }
     #endif
 
@@ -252,8 +252,8 @@ public class VideoView: NativeView, Loggable {
         var captureDevice: AVCaptureDevice?
 
         #if os(iOS) || os(tvOS) || os(visionOS)
-        // Picture in Picture
-        var pictureInPictureController: PictureInPictureController?
+        // Picture in Picture - stored as Any? to avoid availability issues
+        var pictureInPictureController: Any?
         #endif
 
         // whether if current state should be rendering
@@ -964,7 +964,7 @@ public extension VideoView {
         }
 
         // Create PiP controller if it doesn't exist
-        if _state.pictureInPictureController == nil, let pipLayer = _pipDisplayLayer {
+        if (_state.pictureInPictureController as? PictureInPictureController) == nil, let pipLayer = _pipDisplayLayer {
             guard let pipController = PictureInPictureController(sampleBufferDisplayLayer: pipLayer) else {
                 log("Failed to create PictureInPictureController", .error)
                 return false
@@ -980,7 +980,7 @@ public extension VideoView {
     /// Note: You must call preparePictureInPicture() before calling this method
     @available(iOS 15.0, *)
     func startPictureInPicture() {
-        guard let pipController = _state.pictureInPictureController else {
+        guard let pipController = _state.pictureInPictureController as? PictureInPictureController else {
             log("Picture in Picture controller not initialized. Call preparePictureInPicture() first.", .warning)
             return
         }
@@ -991,14 +991,14 @@ public extension VideoView {
     /// Stop Picture in Picture
     @available(iOS 15.0, *)
     func stopPictureInPicture() {
-        _state.pictureInPictureController?.stopPictureInPicture()
+        (_state.pictureInPictureController as? PictureInPictureController)?.stopPictureInPicture()
     }
 
     /// Clean up Picture in Picture resources
     /// Call this when you no longer need Picture in Picture
     @available(iOS 15.0, *)
     func cleanupPictureInPicture() {
-        _state.pictureInPictureController?.invalidate()
+        (_state.pictureInPictureController as? PictureInPictureController)?.invalidate()
         _state.mutate { $0.pictureInPictureController = nil }
         _pipDisplayLayer = nil
         log("Picture in Picture cleaned up")
